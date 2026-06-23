@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Orçamento MKT</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #181c27;
+    --surface2: #1e2335;
+    --border: #2a2f45;
+    --accent: #4f8ef7;
+    --accent2: #38d9a9;
+    --warn: #f06a4e;
+    --text: #e8eaf0;
+    --muted: #7b82a0;
+    --green: #38d9a9;
+    --red: #f06a4e;
+    --yellow: #f5c842;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .logo-area { display: flex; align-items: center; gap: 12px; }
+  .logo-icon {
+    width: 38px; height: 38px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 900; color: #fff;
+  }
+  .logo-text h1 { font-size: 15px; font-weight: 700; letter-spacing: .02em; }
+  .logo-text p { font-size: 12px; color: var(--muted); margin-top: 1px; }
+
+  .header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+  .upload-btn {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--accent); color: #fff;
+    border: none; border-radius: 8px;
+    padding: 9px 18px; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: background .15s;
+  }
+  .upload-btn:hover { background: #3b7be8; }
+  #fileInput { display: none; }
+
+  .pdf-btn {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 9px 18px; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: background .15s, border-color .15s;
+  }
+  .pdf-btn:hover { background: var(--border); border-color: var(--muted); }
+  .pdf-btn:disabled { opacity: .4; cursor: default; }
+
+  .saved-badge {
+    font-size: 11px; color: var(--green);
+    display: flex; align-items: center; gap: 5px;
+  }
+
+  /* MAIN */
+  main { padding: 28px 32px; max-width: 1400px; margin: 0 auto; }
+
+  /* SUMMARY BAR */
+  .summary-bar {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 16px; margin-bottom: 28px;
+  }
+
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+  }
+  .kpi-label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 6px; }
+  .kpi-value { font-size: 22px; font-weight: 700; }
+  .kpi-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .green { color: var(--green); }
+  .red { color: var(--red); }
+  .yellow { color: var(--yellow); }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-size: 12px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .1em; color: var(--muted); margin-bottom: 14px;
+  }
+
+  /* MONTH CARDS GRID */
+  .months-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 14px;
+    margin-bottom: 32px;
+  }
+
+  .month-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    cursor: pointer;
+    transition: border-color .15s, transform .1s;
+    position: relative;
+    overflow: hidden;
+  }
+  .month-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .month-card.no-data { opacity: .55; cursor: default; }
+  .month-card.no-data:hover { transform: none; border-color: var(--border); }
+
+  .month-name {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .1em; color: var(--muted); margin-bottom: 10px;
+  }
+
+  .month-val { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+  .month-val-label { font-size: 10px; color: var(--muted); margin-bottom: 8px; }
+
+  .progress-bar-wrap { background: var(--border); border-radius: 4px; height: 5px; overflow: hidden; }
+  .progress-bar { height: 100%; border-radius: 4px; transition: width .4s; }
+
+  .month-pct { font-size: 11px; margin-top: 6px; font-weight: 600; }
+
+  .badge-future {
+    font-size: 9px; letter-spacing: .07em; text-transform: uppercase;
+    background: var(--border); color: var(--muted);
+    border-radius: 4px; padding: 2px 6px; display: inline-block;
+    margin-top: 6px;
+  }
+
+  /* CATEGORY TABLE */
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 32px;
+  }
+  .table-header {
+    padding: 14px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .table-header span { font-size: 13px; font-weight: 600; }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    padding: 10px 16px; text-align: left;
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .07em; color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+  tbody tr { border-bottom: 1px solid var(--border); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody td { padding: 12px 16px; font-size: 13px; }
+  tbody tr:hover td { background: rgba(79,142,247,.04); }
+  .td-right { text-align: right; }
+  .td-center { text-align: center; }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.7); z-index: 1000;
+    align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 92vw; max-width: 920px;
+    max-height: 85vh;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    animation: slideUp .2s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } }
+
+  .modal-header {
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .modal-title { font-size: 15px; font-weight: 700; }
+  .modal-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .modal-header-right { display: flex; align-items: center; gap: 8px; }
+
+  .modal-close {
+    background: var(--border); border: none; border-radius: 8px;
+    color: var(--text); width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 16px; transition: background .15s;
+  }
+  .modal-close:hover { background: var(--warn); }
+
+  .modal-body { overflow-y: auto; padding: 0; flex: 1; }
+
+  .modal-search {
+    padding: 12px 20px; border-bottom: 1px solid var(--border);
+    display: flex; gap: 10px; align-items: center;
+  }
+  .modal-search input {
+    flex: 1; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); padding: 7px 12px; font-size: 13px;
+    outline: none;
+  }
+  .modal-search input:focus { border-color: var(--accent); }
+
+  .modal-table-wrap { overflow-x: auto; }
+  .modal-table { width: 100%; border-collapse: collapse; min-width: 600px; }
+  .modal-table thead th {
+    padding: 10px 16px; font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .07em; color: var(--muted);
+    border-bottom: 1px solid var(--border); background: var(--surface2);
+    position: sticky; top: 0; z-index: 1;
+  }
+  .modal-table tbody tr { border-bottom: 1px solid var(--border); }
+  .modal-table tbody tr:hover td { background: rgba(79,142,247,.05); }
+  .modal-table tbody td { padding: 10px 16px; font-size: 12px; }
+
+  .tag {
+    display: inline-block; padding: 2px 8px; border-radius: 20px;
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+  }
+  .tag-pub { background: rgba(79,142,247,.15); color: var(--accent); }
+  .tag-bri { background: rgba(56,217,169,.15); color: var(--green); }
+  .tag-pat { background: rgba(245,200,66,.15); color: var(--yellow); }
+  .tag-doa { background: rgba(240,106,78,.15); color: var(--red); }
+  .tag-out { background: rgba(123,130,160,.15); color: var(--muted); }
+
+  /* EMPTY / LOADING */
+  .empty-state {
+    text-align: center; padding: 60px 20px; color: var(--muted);
+  }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-state h2 { font-size: 16px; color: var(--text); margin-bottom: 6px; }
+  .empty-state p { font-size: 13px; }
+
+  /* PDF LOADING OVERLAY */
+  .pdf-loading {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.8); z-index: 2000;
+    align-items: center; justify-content: center;
+    flex-direction: column; gap: 16px;
+  }
+  .pdf-loading.show { display: flex; }
+  .pdf-loading p { color: var(--text); font-size: 14px; font-weight: 600; }
+  .spinner {
+    width: 36px; height: 36px; border: 3px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* PRINT / PDF overrides */
+  @media print {
+    header .header-actions { display: none !important; }
+    .modal-overlay { display: none !important; }
+    body { background: #fff; color: #111; }
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 700px) {
+    main { padding: 16px; }
+    .summary-bar { grid-template-columns: 1fr 1fr; }
+    header { padding: 14px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-area">
+    <div class="logo-icon">M</div>
+    <div class="logo-text">
+      <h1>Dashboard MKT</h1>
+      <p id="headerSub">Orçamento × Realizado</p>
+    </div>
+  </div>
+  <div class="header-actions">
+    <span class="saved-badge" id="savedBadge" style="display:none">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      Planilha salva localmente
+    </span>
+    <button class="pdf-btn" id="pdfBtn" disabled>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <rect x="2" y="2" width="20" height="20" rx="3"/>
+        <line x1="12" y1="8" x2="12" y2="16"/>
+        <polyline points="8 12 12 16 16 12"/>
+        </svg>
+        Capturar Tela
+    </button>
+    <label class="upload-btn">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      Importar Planilha
+      <input type="file" id="fileInput" accept=".xlsx,.xls">
+    </label>
+  </div>
+</header>
+
+<main id="main-content">
+  <div class="empty-state">
+    <div class="empty-icon">📊</div>
+    <h2>Nenhuma planilha carregada</h2>
+    <p>Clique em <strong>Importar Planilha</strong> para carregar seu orçamento anual.<br>
+    <span style="color:var(--green);font-size:12px;margin-top:6px;display:block">✓ A planilha será salva no navegador automaticamente.</span></p>
+  </div>
+</main>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modalTitle">Lançamentos</div>
+        <div class="modal-sub" id="modalSub"></div>
+      </div>
+      <div class="modal-header-right">
+        <button class="pdf-btn" id="modalPdfBtn" style="padding:7px 14px;font-size:12px">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+          Capturar mês
+        </button>
+        <button class="modal-close" id="modalClose">✕</button>
+      </div>
+    </div>
+    <div class="modal-search">
+      <input type="text" id="modalSearch" placeholder="Buscar por histórico, categoria...">
+    </div>
+    <div class="modal-body" id="modalBody">
+      <div class="modal-table-wrap">
+        <table class="modal-table">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Histórico</th>
+              <th>Filial</th>
+              <th style="text-align:right">Débito (R$)</th>
+              <th>Categoria</th>
+            </tr>
+          </thead>
+          <tbody id="modalTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PDF LOADING -->
+<div class="pdf-loading" id="pdfLoading">
+  <div class="spinner"></div>
+  <p id="pdfLoadingMsg">Gerando PDF...</p>
+</div>
+
+<script>
+const MONTH_NAMES = ['JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
+const MONTH_COLS = {
+  JANEIRO:[2,3],FEVEREIRO:[5,6],MARÇO:[8,9],ABRIL:[11,12],
+  MAIO:[14,15],JUNHO:[17,18],JULHO:[20,21],AGOSTO:[23,24],
+  SETEMBRO:[26,27],OUTUBRO:[29,30],NOVEMBRO:[32,33],DEZEMBRO:[35,36]
+};
+const LS_KEY = 'dashboard_mkt_xlsx_b64';
+
+let globalData = null;
+let currentModalMonth = null;
+let currentModalRows = [];
+
+// ─── AUTO-LOAD FROM LOCALSTORAGE ───────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem(LS_KEY);
+  if (saved) {
+    try {
+      const wb = XLSX.read(saved, { type: 'base64', cellDates: true });
+      parseAndRender(wb, true);
+    } catch(e) {
+      localStorage.removeItem(LS_KEY);
+    }
+  }
+});
+
+// ─── FILE INPUT ──────────────────────────────────────────────────────────────
+document.getElementById('fileInput').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const b64 = ev.target.result.split(',')[1];
+      localStorage.setItem(LS_KEY, b64);
+      const wb = XLSX.read(b64, { type: 'base64', cellDates: true });
+      parseAndRender(wb, false);
+    } catch(err) {
+      alert('Erro ao ler planilha: ' + err.message);
+    }
+  };
+  reader.readAsDataURL(file);
+});
+
+// ─── PARSE ───────────────────────────────────────────────────────────────────
+function parseAndRender(wb, fromCache) {
+  const mktSheet = wb.Sheets[wb.SheetNames[0]];
+  const mktRaw = XLSX.utils.sheet_to_json(mktSheet, { header: 1, defval: null });
+
+  const totalRowIdx = mktRaw.findIndex(r => r[0] === 'TOTAL');
+  const totalRow = totalRowIdx >= 0 ? mktRaw[totalRowIdx] : mktRaw[9] || [];
+  const catRows = mktRaw.slice(2, totalRowIdx >= 0 ? totalRowIdx : 9).filter(r => r[0]);
+  const orcadoAnual = toNum(totalRow[1]) || 2640000;
+
+  const months = MONTH_NAMES.map(m => {
+    const [oc, rc] = MONTH_COLS[m];
+    const orcado = toNum(totalRow[oc]) || 0;
+    const realizado = toNum(totalRow[rc]) || 0;
+    const categories = catRows.map(r => ({
+      name: r[0], realizado: toNum(r[rc]) || 0
+    })).filter(c => c.realizado > 0);
+    return { month: m, orcado, realizado, categories, hasData: realizado > 0 };
+  });
+
+  const lancSheet = wb.Sheets[wb.SheetNames[1]];
+  const lancRaw = XLSX.utils.sheet_to_json(lancSheet, { header: 1, defval: null, cellDates: true });
+  const lancamentos = lancRaw.slice(1).filter(r => r[1]).map(r => ({
+    data: parseDate(r[1]),
+    historico: r[2] || '',
+    filial: r[3] || '',
+    debito: toNum(r[4]) || 0,
+    categoria: r[5] || ''
+  }));
+
+  // Detect file name hint from sheet name
+  const sheetName = wb.SheetNames[0];
+  document.getElementById('headerSub').textContent = fromCache
+    ? 'Orçamento × Realizado  ·  dados salvos localmente'
+    : 'Orçamento × Realizado';
+
+  globalData = { months, lancamentos, orcadoAnual };
+  renderDashboard();
+
+  document.getElementById('pdfBtn').disabled = false;
+  document.getElementById('savedBadge').style.display = 'flex';
+  if (!fromCache) {
+    setTimeout(() => document.getElementById('savedBadge').style.display = 'none', 4000);
+  }
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function parseDate(val) {
+  if (!val) return null;
+  if (val instanceof Date) return val;
+  if (typeof val === 'number') return XLSX.SSF.parse_date_code(val);
+  return new Date(val);
+}
+function formatDate(d) {
+  if (!d) return '';
+  try { return (d instanceof Date ? d : new Date(d)).toLocaleDateString('pt-BR'); }
+  catch { return ''; }
+}
+function toNum(v) {
+  if (v === null || v === undefined || v === '') return 0;
+  const n = parseFloat(String(v).replace(',', '.'));
+  return isNaN(n) ? 0 : n;
+}
+function fmt(n) { return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 }); }
+function fmtShort(n) {
+  if (n >= 1e6) return 'R$ ' + (n/1e6).toFixed(2).replace('.',',') + 'M';
+  if (n >= 1e3) return 'R$ ' + (n/1e3).toFixed(1).replace('.',',') + 'K';
+  return fmt(n);
+}
+function tagClass(cat) {
+  if (!cat) return 'tag-out';
+  const c = cat.toLowerCase();
+  if (c.includes('publicidade') || c.includes('propaganda')) return 'tag-pub';
+  if (c.includes('brinde')) return 'tag-bri';
+  if (c.includes('patroc')) return 'tag-pat';
+  if (c.includes('doa')) return 'tag-doa';
+  return 'tag-out';
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+function renderDashboard() {
+  const { months, lancamentos, orcadoAnual } = globalData;
+  const realizados = months.filter(m => m.hasData);
+  const totalRealizado = realizados.reduce((s, m) => s + m.realizado, 0);
+  const totalOrcadoAte = realizados.reduce((s, m) => s + m.orcado, 0);
+  const pctGeral = totalOrcadoAte > 0 ? (totalRealizado / totalOrcadoAte * 100) : 0;
+  const saldo = totalOrcadoAte - totalRealizado;
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="summary-bar">
+      <div class="kpi-card">
+        <div class="kpi-label">Orçado Anual</div>
+        <div class="kpi-value">${fmtShort(orcadoAnual)}</div>
+        <div class="kpi-sub">Total previsto 2026</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Realizado Acumulado</div>
+        <div class="kpi-value ${pctGeral > 100 ? 'red' : 'green'}">${fmtShort(totalRealizado)}</div>
+        <div class="kpi-sub">${realizados.length} ${realizados.length === 1 ? 'mês' : 'meses'} realizados</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">% Orçado (meses realizados)</div>
+        <div class="kpi-value ${pctGeral > 110 ? 'red' : pctGeral > 100 ? 'yellow' : 'green'}">${pctGeral.toFixed(1)}%</div>
+        <div class="kpi-sub">vs orçado dos meses</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Saldo (orçado − realizado)</div>
+        <div class="kpi-value ${saldo < 0 ? 'red' : 'green'}">${fmtShort(Math.abs(saldo))}</div>
+        <div class="kpi-sub">${saldo < 0 ? '▲ Acima do orçado' : '▼ Abaixo do orçado'}</div>
+      </div>
+    </div>
+
+    <div class="section-title">Meses — clique para ver lançamentos de NF</div>
+    <div class="months-grid">
+      ${months.map(renderMonthCard).join('')}
+    </div>
+
+    <div class="section-title">Resumo por Categoria (acumulado)</div>
+    ${renderCategoryTable()}
+  `;
+
+  document.querySelectorAll('.month-card[data-month]').forEach(card => {
+    card.addEventListener('click', () => openModal(card.dataset.month));
+  });
+}
+
+function renderMonthCard(m) {
+  const pct = m.orcado > 0 ? (m.realizado / m.orcado * 100) : 0;
+  const barColor = pct > 110 ? 'var(--red)' : pct > 100 ? 'var(--yellow)' : 'var(--green)';
+  const barW = Math.min(pct, 100).toFixed(1);
+  if (!m.hasData) return `<div class="month-card no-data">
+    <div class="month-name">${m.month.toLowerCase()}</div>
+    <div class="month-val" style="color:var(--muted)">${fmtShort(m.orcado)}</div>
+    <div class="month-val-label">orçado</div>
+    <div class="badge-future">Sem lançamentos</div>
+  </div>`;
+  return `<div class="month-card" data-month="${m.month}">
+    <div class="month-name">${m.month.toLowerCase()}</div>
+    <div class="month-val" style="color:${barColor}">${fmtShort(m.realizado)}</div>
+    <div class="month-val-label">realizado de ${fmtShort(m.orcado)}</div>
+    <div class="progress-bar-wrap"><div class="progress-bar" style="width:${barW}%;background:${barColor}"></div></div>
+    <div class="month-pct" style="color:${barColor}">${pct.toFixed(1)}%</div>
+  </div>`;
+}
+
+function renderCategoryTable() {
+  const catMap = {};
+  globalData.months.forEach(m => m.categories.forEach(c => {
+    catMap[c.name] = (catMap[c.name] || 0) + c.realizado;
+  }));
+  const cats = Object.entries(catMap).sort((a,b) => b[1]-a[1]);
+  const total = cats.reduce((s,c) => s+c[1], 0);
+  const rows = cats.map(([name, val]) => `<tr>
+    <td><span class="tag ${tagClass(name)}">${name}</span></td>
+    <td class="td-right">${fmt(val)}</td>
+    <td class="td-right">${total > 0 ? (val/total*100).toFixed(1) : '0.0'}%</td>
+  </tr>`).join('');
+  return `<div class="table-wrap">
+    <div class="table-header">
+      <span>Distribuição de Gastos Realizados</span>
+      <span style="font-size:12px;color:var(--muted)">Total: ${fmt(total)}</span>
+    </div>
+    <table>
+      <thead><tr>
+        <th>Categoria</th>
+        <th style="text-align:right">Realizado (R$)</th>
+        <th style="text-align:right">Participação</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+// ─── MODAL ───────────────────────────────────────────────────────────────────
+function openModal(monthName) {
+  const MONTH_NUM = MONTH_NAMES.indexOf(monthName) + 1;
+  currentModalMonth = monthName;
+  const filtered = globalData.lancamentos.filter(l => {
+    if (!l.data) return false;
+    const dt = l.data instanceof Date ? l.data : new Date(l.data);
+    return dt.getMonth() + 1 === MONTH_NUM;
+  });
+  currentModalRows = filtered;
+  const total = filtered.reduce((s,l) => s+l.debito, 0);
+  document.getElementById('modalTitle').textContent = `Lançamentos — ${monthName.charAt(0)+monthName.slice(1).toLowerCase()}`;
+  document.getElementById('modalSub').textContent = `${filtered.length} NFs · Total: ${fmt(total)}`;
+  renderModalTable(filtered);
+  document.getElementById('modalOverlay').classList.add('open');
+  document.getElementById('modalSearch').value = '';
+  document.getElementById('modalSearch').oninput = e => {
+    const q = e.target.value.toLowerCase();
+    renderModalTable(q ? filtered.filter(l =>
+      l.historico.toLowerCase().includes(q) ||
+      l.categoria.toLowerCase().includes(q) ||
+      String(l.filial).toLowerCase().includes(q)
+    ) : filtered);
+  };
+}
+
+async function captureToClipboard(label) {
+  const loading = document.getElementById('pdfLoading');
+  const loadingMsg = document.getElementById('pdfLoadingMsg');
+
+  if (!loading || !loadingMsg) return;
+
+  try {
+    loadingMsg.textContent = `Capturando ${label || 'tela'}...`;
+    loading.classList.add('show');
+
+    // 👇 Esconde overlay ANTES do print
+    loading.classList.remove('show');
+    await new Promise(r => setTimeout(r, 50));
+
+    const target = document.getElementById('main-content');
+    if (!target) throw new Error('main-content não encontrado');
+
+    const canvas = await html2canvas(target, {
+      scale: window.devicePixelRatio || 1,
+      useCORS: true,
+      backgroundColor: '#0f1117'
+    });
+
+    // 👇 Reativa overlay depois da captura
+    loading.classList.add('show');
+    loadingMsg.textContent = 'Copiando imagem...';
+
+    const blob = await new Promise((resolve, reject) => {
+      canvas.toBlob(b => b ? resolve(b) : reject(new Error('Falha ao gerar imagem')), 'image/png');
+    });
+
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+
+    loadingMsg.textContent = 'Imagem copiada! Agora é só colar (Ctrl+V)';
+    await new Promise(r => setTimeout(r, 2000));
+
+  } catch (err) {
+    console.error(err);
+    alert('Erro ao capturar: ' + err.message);
+  } finally {
+    loading.classList.remove('show');
+  }
+}
+
+// ─── BOTÃO PRINCIPAL ───────────────────────────────────────────
+document.getElementById('pdfBtn').addEventListener('click', async () => {
+  await captureToClipboard('Dashboard MKT');
+});
+
+// ─── BOTÃO DO MODAL ────────────────────────────────────────────
+document.getElementById('modalPdfBtn').addEventListener('click', async () => {
+  if (!currentModalMonth) return;
+  await captureToClipboard('Lançamentos — ' + currentModalMonth);
+});
+</script>
+</body>
+</html>

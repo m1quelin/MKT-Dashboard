@@ -141,10 +141,10 @@ function renderDashboard() {
         <div class="kpi-value ${pctGeral > 100 ? 'red' : 'green'}">${fmtShort(totalRealizado)}</div>
         <div class="kpi-sub">${realizados.length} ${realizados.length === 1 ? 'mês' : 'meses'} realizados</div>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-label">% Orçado (meses realizados)</div>
-        <div class="kpi-value ${pctGeral > 110 ? 'red' : pctGeral > 100 ? 'yellow' : 'green'}">${pctGeral.toFixed(1)}%</div>
-        <div class="kpi-sub">vs orçado dos meses</div>
+            <div class="kpi-card">
+        <div class="kpi-label">Orçamento Restante</div>
+        <div class="kpi-value ${((orcadoAnual - totalRealizado) / orcadoAnual * 100) <= 20 ? 'red' : ((orcadoAnual - totalRealizado) / orcadoAnual * 100) <= 40 ? 'yellow' : 'green'}">${fmtShort(orcadoAnual - totalRealizado)}</div>
+        <div class="kpi-sub">${((orcadoAnual - totalRealizado) / orcadoAnual * 100).toFixed(1)}% do orçamento total</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Saldo (orçado − realizado)</div>
@@ -168,7 +168,7 @@ function renderDashboard() {
 }
 
 function renderMonthCard(m) {
-  const pct = m.orcado > 0 ? (m.realizado / m.orcado * 100) : 0;
+  const pct = m.orcado ? (m.realizado / m.orcado) * 100 : 0;
   const barColor = pct > 110 ? 'var(--red)' : pct > 100 ? 'var(--yellow)' : 'var(--green)';
   const barW = Math.min(pct, 100).toFixed(1);
   if (!m.hasData) return `<div class="month-card no-data">
@@ -283,6 +283,37 @@ async function captureToClipboard(label) {
     loading.classList.remove('show');
   }
 }
+
+function renderModalTable(rows) {
+  const tbody = document.getElementById('modalTableBody');
+  tbody.innerHTML = '';
+
+  if (!rows || rows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5">Nenhum lançamento encontrado.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = rows.map(row => `
+    <tr>
+      <td>${formatDate(row.data)}</td>
+      <td>${row.historico}</td>
+      <td class="td-center">${row.filial}</td>
+      <td style="text-align:right;font-weight:600">${fmt(row.debito)}</td>
+      <td><span class="tag ${tagClass(row.categoria)}">${row.categoria || '—'}</span></td>
+    </tr>
+  `).join('');
+}
+
+// ─── FECHAR MODAL ──────────────────────────────────────────────
+document.getElementById('modalClose').addEventListener('click', () => {
+  document.getElementById('modalOverlay').classList.remove('open');
+});
+
+document.getElementById('modalOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modalOverlay')) {
+    document.getElementById('modalOverlay').classList.remove('open');
+  }
+});
 
 // ─── BOTÃO PRINCIPAL ───────────────────────────────────────────
 document.getElementById('pdfBtn').addEventListener('click', async () => {

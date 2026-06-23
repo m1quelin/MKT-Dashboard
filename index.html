@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Orçamento MKT</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <div class="logo-area">
+    <div class="logo-icon">M</div>
+    <div class="logo-text">
+      <h1>Dashboard MKT</h1>
+      <p id="headerSub">Orçamento × Realizado</p>
+    </div>
+  </div>
+  <div class="header-actions">
+    <span class="saved-badge" id="savedBadge" style="display:none">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      Planilha salva localmente
+    </span>
+    <button class="pdf-btn" id="pdfBtn" disabled>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <rect x="2" y="2" width="20" height="20" rx="3"/>
+        <line x1="12" y1="8" x2="12" y2="16"/>
+        <polyline points="8 12 12 16 16 12"/>
+        </svg>
+        Capturar Tela
+    </button>
+    <label class="upload-btn">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      Importar Planilha
+      <input type="file" id="fileInput" accept=".xlsx,.xls">
+    </label>
+  </div>
+</header>
+
+<main id="main-content">
+  <div class="empty-state">
+    <div class="empty-icon">📊</div>
+    <h2>Nenhuma planilha carregada</h2>
+    <p>Clique em <strong>Importar Planilha</strong> para carregar seu orçamento anual.<br>
+    <span style="color:var(--green);font-size:12px;margin-top:6px;display:block">✓ A planilha será salva no navegador automaticamente.</span></p>
+  </div>
+</main>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modalTitle">Lançamentos</div>
+        <div class="modal-sub" id="modalSub"></div>
+      </div>
+      <div class="modal-header-right">
+        <button class="pdf-btn" id="modalPdfBtn" style="padding:7px 14px;font-size:12px">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+          Capturar mês
+        </button>
+        <button class="modal-close" id="modalClose">✕</button>
+      </div>
+    </div>
+    <div class="modal-search">
+      <input type="text" id="modalSearch" placeholder="Buscar por histórico, categoria...">
+    </div>
+    <div class="modal-body" id="modalBody">
+      <div class="modal-table-wrap">
+        <table class="modal-table">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Histórico</th>
+              <th>Filial</th>
+              <th style="text-align:right">Débito (R$)</th>
+              <th>Categoria</th>
+            </tr>
+          </thead>
+          <tbody id="modalTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PDF LOADING -->
+<div class="pdf-loading" id="pdfLoading">
+  <div class="spinner"></div>
+  <p id="pdfLoadingMsg">Gerando PDF...</p>
+</div>
+<script src="script.js" defer></script>
+</body>
+</html>

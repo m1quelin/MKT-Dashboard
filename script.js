@@ -128,6 +128,13 @@ function renderDashboard() {
   const totalOrcadoAte = realizados.reduce((s, m) => s + m.orcado, 0);
   const pctGeral = totalOrcadoAte > 0 ? (totalRealizado / totalOrcadoAte * 100) : 0;
   const saldo = totalOrcadoAte - totalRealizado;
+  const restante = orcadoAnual - totalRealizado;
+  const pctRestante = orcadoAnual > 0 ? (restante / orcadoAnual * 100) : 0;
+  const pctGasto = orcadoAnual > 0 ? (totalRealizado / orcadoAnual * 100) : 0;
+  const kpiClass = pctRestante <= 20 ? 'red' : pctRestante <= 40 ? 'yellow' : 'green';
+  const barW = Math.min(pctGasto, 100).toFixed(1);
+  const barColor = pctRestante <= 20 ? 'var(--red)' : pctRestante <= 40 ? 'var(--yellow)' : 'var(--green)';
+  // --------------------------------------------------------
 
   document.getElementById('main-content').innerHTML = `
     <div class="summary-bar">
@@ -141,10 +148,13 @@ function renderDashboard() {
         <div class="kpi-value ${pctGeral > 100 ? 'red' : 'green'}">${fmtShort(totalRealizado)}</div>
         <div class="kpi-sub">${realizados.length} ${realizados.length === 1 ? 'mês' : 'meses'} realizados</div>
       </div>
-            <div class="kpi-card">
+      <div class="kpi-card">
         <div class="kpi-label">Orçamento Restante</div>
-        <div class="kpi-value ${((orcadoAnual - totalRealizado) / orcadoAnual * 100) <= 20 ? 'red' : ((orcadoAnual - totalRealizado) / orcadoAnual * 100) <= 40 ? 'yellow' : 'green'}">${fmtShort(orcadoAnual - totalRealizado)}</div>
-        <div class="kpi-sub">${((orcadoAnual - totalRealizado) / orcadoAnual * 100).toFixed(1)}% do orçamento total</div>
+        <div class="kpi-value ${kpiClass}">${fmtShort(restante)}</div>
+        <div class="progress-bar-wrap" style="margin-top: 8px;">
+            <div class="progress-bar" style="width: ${barW}%; background: ${barColor}"></div>
+        </div>
+        <div class="kpi-sub ${kpiClass}">${pctRestante.toFixed(1)}% restante do orçamento</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Saldo (orçado − realizado)</div>
@@ -152,16 +162,13 @@ function renderDashboard() {
         <div class="kpi-sub">${saldo < 0 ? '▲ Acima do orçado' : '▼ Abaixo do orçado'}</div>
       </div>
     </div>
-
     <div class="section-title">Meses — clique para ver lançamentos de NF</div>
     <div class="months-grid">
       ${months.map(renderMonthCard).join('')}
     </div>
-
     <div class="section-title">Resumo por Categoria (acumulado)</div>
     ${renderCategoryTable()}
   `;
-
   document.querySelectorAll('.month-card[data-month]').forEach(card => {
     card.addEventListener('click', () => openModal(card.dataset.month));
   });

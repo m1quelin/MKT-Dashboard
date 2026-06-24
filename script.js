@@ -78,6 +78,17 @@ function parseAndRender(wb, fromCache) {
     : 'Orçamento × Realizado';
 
   globalData = { months, lancamentos, orcadoAnual };
+  if (!document.getElementById('themeToggle')) {
+    const actionsArea = document.querySelector('.header-actions');
+    if (actionsArea) {
+      const btnHTML = `
+        <button id="themeToggle" class="theme-btn" title="Alternar Tema">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        </button>`;
+      actionsArea.insertAdjacentHTML('afterbegin', btnHTML);
+      setupThemeToggle(); // Inicializa o ouvinte de clique do botão
+    }
+  }
   renderDashboard();
 
   document.getElementById('pdfBtn').disabled = false;
@@ -267,7 +278,7 @@ async function captureToClipboard(label) {
     const canvas = await html2canvas(target, {
       scale: window.devicePixelRatio || 1,
       useCORS: true,
-      backgroundColor: '#0f1117'
+      backgroundColor: document.body.classList.contains('light-mode') ? '#f5f6fa' : '#0f1117'
     });
 
     // 👇 Reativa overlay depois da captura
@@ -332,3 +343,31 @@ document.getElementById('modalPdfBtn').addEventListener('click', async () => {
   if (!currentModalMonth) return;
   await captureToClipboard('Lançamentos — ' + currentModalMonth);
 });
+// ─── CONFIGURAÇÃO DO WHITE MODE / DARK MODE ────────────────────────────────
+function initTheme() {
+  const savedTheme = localStorage.getItem('dashboard_theme');
+  if (savedTheme === 'light') {
+    document.body.classList.add('light-mode');
+  }
+}
+
+function setupThemeToggle() {
+  const btn = document.getElementById('themeToggle');
+  if (!btn) return;
+  
+  // Remove ouvintes antigos caso a função seja chamada mais de uma vez
+  btn.replaceWith(btn.cloneNode(true));
+  const newBtn = document.getElementById('themeToggle');
+  
+  newBtn.addEventListener('click', () => {
+    document.body.classList.toggle('light-mode');
+    if (document.body.classList.contains('light-mode')) {
+      localStorage.setItem('dashboard_theme', 'light');
+    } else {
+      localStorage.setItem('dashboard_theme', 'dark');
+    }
+  });
+}
+
+// Executa a leitura do tema assim que o script carrega
+initTheme();

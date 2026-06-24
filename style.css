@@ -1,4 +1,5 @@
   :root {
+    /* TEMA ESCURO PADRÃO */
     --bg: #0f1117;
     --surface: #181c27;
     --surface2: #1e2335;
@@ -13,6 +14,17 @@
     --yellow: #f5c842;
   }
 
+  /* TEMA CLARO (WHITE MODE) */
+  body.light-mode {
+    --bg: #f5f6fa;
+    --surface: #ffffff;
+    --surface2: #f0f2f8;
+    --border: #dcdfe9;
+    --text: #1e2335;
+    --muted: #626986;
+    /* Manter os acentos e cores de status padrão traz consistência ao design */
+  }
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
@@ -24,6 +36,7 @@
 
 header {
   width: 100%;
+  border-bottom: 1px solid var(--muted);
 }
 
 .header-wrapper {
@@ -286,8 +299,42 @@ header {
   }
 
   /* RESPONSIVE */
-  @media (max-width: 700px) {
+@media (max-width: 700px) {
     main { padding: 16px; }
     .summary-bar { grid-template-columns: 1fr 1fr; }
-    header { padding: 14px 16px; }
+    
+    header { 
+      padding: 14px 16px; 
+    }
+
+    .header-wrapper {
+      padding: 0;
+      width: 100%;
+      display: flex;
+      justify-content: flex-end; /* Joga os botões para a ponta direita */
+    }
+
+    /* Oculta o bloco completo da logo no mobile */
+    .logo-area {
+      display: none;
+    }
+
+    .header-actions {
+      gap: 8px;
+    }
   }
+
+  /* INVERSÃO DO LOGO NO WHITE MODE (Filtro para pintar de preto) */
+  body.light-mode .logo-area img {
+    filter: invert(1) brightness(0.2); /* Inverte o branco para preto e calibra o tom */
+  }
+
+  /* Estilo básico para o novo botão de tema */
+  .theme-btn {
+    display: flex; align-items: center; justify-content: center;
+    background: var(--surface2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+    width: 36px; height: 36px; cursor: pointer;
+    transition: background .15s, border-color .15s;
+  }
+  .theme-btn:hover { background: var(--border); }
